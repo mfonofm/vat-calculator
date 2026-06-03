@@ -24,6 +24,12 @@ pipeline {
       }
     }
 
+    stage('Security Scan') {
+      steps {
+        sh "grype ${registry}"
+      }
+    }
+
     stage('Push Image') {
       steps {
         script {
