@@ -2,10 +2,13 @@ pipeline {
   agent any
 
   environment {
+    gcpCreds = 'gcp_credentials'
     dockerCreds = credentials('dockerhub_login')
     registry = "${dockerCreds_USR}/vatcal"
     registryCredentials = "dockerhub_login"
     dockerImage = ""
+    TF_VAR_gcp_project = "qwiklabs-gcp-01-30ccde0a7136"
+    TF_VAR_docker_registry = "${registry}"
   }
 
   stages {
@@ -26,7 +29,7 @@ pipeline {
 
     stage('Security Scan') {
       steps {
-        sh "grype ${registry}"
+        sh '/usr/local/bin/grype mfonofm/vatcal'
       }
     }
 
@@ -44,6 +47,20 @@ pipeline {
     stage('Clean Up') {
       steps {
         sh "docker image prune --all --force --filter 'until=48h'"
+      }
+    }
+
+    stage('Provision Server') {
+      steps {
+        script {
+          withCredentials([file(credentialsId: gcpCreds, variable: 'GCP_CREDENTIALS')]) {
+            sh '''
+              export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS
+              terraform init
+              terraform apply -auto-approve
+            '''
+          }
+        }
       }
     }
   }
